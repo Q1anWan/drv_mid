@@ -2,9 +2,13 @@
  * @Description: An instance of SPIA
  * @Author: qianwan
  * @Date: 2023-10-30 18:42:55
- * @LastEditTime: 2023-11-01 19:36:39
+ * @LastEditTime: 2023-11-08 20:04:24
  * @LastEditors: qianwan
  */
+ 
+ /*Version 1.0*/
+ /*Stepper 0.1*/
+
 #pragma once
 #ifndef LIB_SPI_I_
 #define LIB_SPI_I_
@@ -14,14 +18,16 @@
 /***********Config library***********/
 
 // #include "stm32f1xx_ll_spi.h"
+// #include "stm32f1xx_ll_gpio.h"
 // #if defined (DMA1)
 // #include "stm32f1xx_ll_dma.h"
 // #endif
 
-//#include "stm32f4xx_ll_spi.h"
-//#if defined (DMA1)
-//#include "stm32f4xx_ll_dma.h"
-//#endif
+// #include "stm32f4xx_ll_spi.h"
+// #include "stm32f4xx_ll_gpio.h"
+// #if defined (DMA1)
+// #include "stm32f4xx_ll_dma.h"
+// #endif
 
  #include "stm32h7xx_ll_spi.h"
  #include "stm32h7xx_ll_gpio.h"
@@ -58,8 +64,8 @@ namespace SPI
         {
 #ifdef SPI_CR1_CSTART
             LL_SPI_ClearFlag_EOT(SPI1);
-#endif
             LL_SPI_ClearFlag_TXTF(SPI1);
+#endif
             LL_SPI_Disable(_pspi);
         }
 
