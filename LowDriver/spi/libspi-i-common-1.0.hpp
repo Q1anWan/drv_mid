@@ -7,7 +7,7 @@
  */
  
  /*Version 1.0*/
- /*Stepper 0.1*/
+ /*Stepper 0.2*/
 
 #pragma once
 #ifndef LIB_SPI_I_
@@ -110,10 +110,204 @@ namespace SPI
         inline void CS_Enable()override{LL_GPIO_ResetOutputPin(_gpio_port_cs,_gpio_pin_cs);}
         inline void CS_Disable()override{LL_GPIO_SetOutputPin(_gpio_port_cs,_gpio_pin_cs);}
 
-        uint8_t ExchangeByte(uint8_t data) override;
-        uint8_t ExchangeByte(uint8_t *pdatatx, uint8_t *pdatarx, uint32_t num) override ;
-        uint8_t WriteByte(uint8_t *pdata, uint32_t num) override;
-        uint8_t ReadByte(uint8_t *pdata, uint32_t num) override;
+        uint8_t ExchangeByte(uint8_t data) override
+        {
+            /*Set an over time*/
+            volatile uint32_t wait_cnt = 0;
+            uint8_t tmp;
+
+            /*Enable SPI and start transform*/
+            SPIEnable(1);
+
+            /*Wait until TX buff is empty*/
+            while(SPICheckTXE()==0){
+                if (wait_cnt++ > _maxwaitcnt)
+                {
+                    LL_SPI_Disable(_pspi);
+                    LL_SPI_ClearFlag_OVR(_pspi);
+                    return 0x00;
+                }
+            }
+
+            /*Transmit data*/
+            LL_SPI_TransmitData8(_pspi,data);
+
+            /*Block until transmission is ready*/
+            while(SPICheckRXNE()==0){
+                if (wait_cnt++ > _maxwaitcnt)
+                {
+                    SPIDisable();
+                    return 0x00;
+                }
+            }
+
+            tmp = LL_SPI_ReceiveData8(_pspi);
+
+            /*Disable SPI*/
+            SPIDisable();
+            return tmp;
+        }
+
+        uint8_t ExchangeByte(uint8_t *pdatatx, uint8_t *pdatarx, uint32_t num) override
+        {
+            /*Set an over time*/
+            volatile uint32_t wait_cnt = 0;
+            uint32_t tx_ref_num = num;
+            uint32_t rx_ref_num = num;
+#ifndef SPI_CR1_CSTART
+            volatile uint8_t tx_allowed = 1;
+#endif
+            /*Check error*/
+            if ((pdatatx == nullptr) || (pdatarx == nullptr) || (num == 0U))
+            {
+                return 0x01;
+            }
+            /*Enable SPI and start transform*/
+            SPIEnable(num);
+
+            while((tx_ref_num>0U)||(rx_ref_num>0U)){
+#ifdef SPI_CR1_CSTART /*Has fif0, TX&RX no need to execute in order*/
+                if((SPICheckTXE()==1)&&(tx_ref_num>0U)){
+                    LL_SPI_TransmitData8(_pspi,*pdatatx);
+                    pdatatx += sizeof(uint8_t);
+                    tx_ref_num--;
+                }
+
+                if((SPICheckRXNE()==1)&&(rx_ref_num>0U)){
+                    *pdatarx = LL_SPI_ReceiveData8(_pspi);
+                    pdatarx += sizeof(uint8_t);
+                    rx_ref_num--;
+                    wait_cnt = 0;
+                }
+#else   /*No fif0, TX&RX need to excute in order*/
+                if((SPICheckTXE()==1)&&(tx_ref_num>0U)&&(tx_allowed==1)){
+                LL_SPI_TransmitData8(_pspi,*pdatatx);
+                pdatatx += sizeof(uint8_t);
+                tx_ref_num--;
+                tx_allowed = 0;
+            }
+
+            if((SPICheckRXNE()==1)&&(rx_ref_num>0U)){
+                *pdatarx = LL_SPI_ReceiveData8(_pspi);
+                pdatarx += sizeof(uint8_t);
+                rx_ref_num--;
+                tx_allowed = 1;
+                wait_cnt = 0;
+            }
+#endif
+                if(++wait_cnt>_maxwaitcnt){
+                    SPIDisable();
+                    return 0x01;
+                }
+            }
+
+            SPIDisable();
+            return 0;
+        }
+
+        uint8_t WriteByte(uint8_t *pdata, uint32_t num) override
+        {
+            /*Set an over time*/
+            volatile uint32_t wait_cnt = 0;
+            uint32_t tx_ref_num = num;
+
+            /*Check error*/
+            if ((pdata == nullptr) || (num == 0U))
+            {
+                return 0x01;
+            }
+            /*Enable SPI and start transform*/
+            SPIEnable(num);
+
+#ifdef SPI_CR1_CSTART
+            while (tx_ref_num > 0U)
+            {
+                /* Wait until TXE flag is set to send data */
+                if(SPICheckTXE()==1){
+                    if((tx_ref_num>3U)&&(LL_SPI_GetFIFOThreshold(_pspi)>LL_SPI_FIFO_TH_03DATA)){
+                        LL_SPI_TransmitData32(_pspi,*((const uint32_t*)pdata));
+                        pdata += sizeof(uint32_t);
+                        tx_ref_num -= 4U;
+                    }
+                    else if((tx_ref_num>1U)&&(LL_SPI_GetFIFOThreshold(_pspi)>LL_SPI_FIFO_TH_01DATA)){
+                        LL_SPI_TransmitData16(_pspi,*((const uint16_t*)pdata));
+                        pdata += sizeof(uint16_t);
+                        tx_ref_num -= 2U;
+                    }
+                    else{
+                        LL_SPI_TransmitData8(_pspi,*pdata);
+                        pdata += sizeof(uint8_t);
+                        tx_ref_num--;
+                    }
+                    wait_cnt = 0;
+                }
+                else if(++wait_cnt>_maxwaitcnt)
+                {
+                    SPIDisable();
+                    return 0x01;
+                }
+            }
+
+            /*Wait for the last transmission*/
+            while(LL_SPI_IsActiveFlag_EOT(_pspi)==0){
+                if(++wait_cnt>_maxwaitcnt)
+                {
+                    SPIDisable();
+                    return 0x01;
+                }
+            }
+#else
+            while (tx_ref_num > 0U)
+        {
+          /* Wait until TXE flag is set to send data */
+          if(SPICheckTXE()==1){
+            LL_SPI_TransmitData8(_pspi,*pdata);
+            pdata += sizeof(uint8_t);
+            tx_ref_num--;
+            wait_cnt = 0;
+          }
+          else if(++wait_cnt>_maxwaitcnt)
+          {
+                SPIDisable();
+                return 0x01;
+          }
+        }
+#endif
+
+            SPIDisable();
+            return 0;
+        }
+
+        uint8_t ReadByte(uint8_t *pdata, uint32_t num) override
+        {
+            return ExchangeByte(pdata,pdata,num);
+
+//        /*Set an over time*/
+//        volatile uint32_t wait_cnt = 0;
+//        uint32_t rx_ref_num = num;
+//
+//        /*Check error*/
+//        if ((pdata == nullptr) || (num == 0U))
+//        {
+//            return 0x01;
+//        }
+//
+//        while(rx_ref_num>0U){
+//            /* Wait until RXNE flag is set to send data */
+//            if(SPICheckRXNE()==1){
+//                *pdata = LL_SPI_ReceiveData8(_pspi);
+//                pdata += sizeof(uint8_t);
+//                rx_ref_num--;
+//                wait_cnt = 0;
+//            }
+//            else if(++wait_cnt>_maxwaitcnt)
+//            {
+//                return 0x01;
+//            }
+//        }
+//
+//        return 0;
+        }
     };
 
 #if defined (DMA1)
@@ -375,205 +569,5 @@ namespace SPI
     }
 
 #endif
-
-    uint8_t cSPIBasic::ExchangeByte(uint8_t data)
-    {
-        /*Set an over time*/
-        volatile uint32_t wait_cnt = 0;
-        uint8_t tmp;
-
-        /*Enable SPI and start transform*/
-        SPIEnable(1);
-
-        /*Wait until TX buff is empty*/
-        while(SPICheckTXE()==0){
-            if (wait_cnt++ > _maxwaitcnt)
-            {
-                LL_SPI_Disable(_pspi);
-                LL_SPI_ClearFlag_OVR(_pspi);
-                return 0x00;
-            }
-        }
-
-        /*Transmit data*/
-        LL_SPI_TransmitData8(_pspi,data);
-
-        /*Block until transmission is ready*/
-        while(SPICheckRXNE()==0){
-            if (wait_cnt++ > _maxwaitcnt)
-            {
-                SPIDisable();
-                return 0x00;
-            }
-        }
-
-        tmp = LL_SPI_ReceiveData8(_pspi);
-
-        /*Disable SPI*/
-        SPIDisable();
-        return tmp;
-    }
-
-    uint8_t cSPIBasic::ExchangeByte(uint8_t *pdatatx, uint8_t *pdatarx, uint32_t num)
-    {
-        /*Set an over time*/
-        volatile uint32_t wait_cnt = 0;
-        uint32_t tx_ref_num = num;
-        uint32_t rx_ref_num = num;
-#ifndef SPI_CR1_CSTART
-        volatile uint8_t tx_allowed = 1;
-#endif
-        /*Check error*/
-        if ((pdatatx == nullptr) || (pdatarx == nullptr) || (num == 0U))
-        {
-            return 0x01;
-        }
-        /*Enable SPI and start transform*/
-        SPIEnable(num);
-
-        while((tx_ref_num>0U)||(rx_ref_num>0U)){
-#ifdef SPI_CR1_CSTART /*Has fif0, TX&RX no need to execute in order*/
-            if((SPICheckTXE()==1)&&(tx_ref_num>0U)){
-                LL_SPI_TransmitData8(_pspi,*pdatatx);
-                pdatatx += sizeof(uint8_t);
-                tx_ref_num--;
-            }
-
-            if((SPICheckRXNE()==1)&&(rx_ref_num>0U)){
-                *pdatarx = LL_SPI_ReceiveData8(_pspi);
-                pdatarx += sizeof(uint8_t);
-                rx_ref_num--;
-                wait_cnt = 0;
-            }
-#else   /*No fif0, TX&RX need to excute in order*/
-            if((SPICheckTXE()==1)&&(tx_ref_num>0U)&&(tx_allowed==1)){
-                LL_SPI_TransmitData8(_pspi,*pdatatx);
-                pdatatx += sizeof(uint8_t);
-                tx_ref_num--;
-                tx_allowed = 0;
-            }
-
-            if((SPICheckRXNE()==1)&&(rx_ref_num>0U)){
-                *pdatarx = LL_SPI_ReceiveData8(_pspi);
-                pdatarx += sizeof(uint8_t);
-                rx_ref_num--;
-                tx_allowed = 1;
-                wait_cnt = 0;
-            }
-#endif
-            if(++wait_cnt>_maxwaitcnt){
-                SPIDisable();
-                return 0x01;
-            }
-        }
-
-        SPIDisable();
-        return 0;
-    }
-
-    uint8_t cSPIBasic::WriteByte(uint8_t *pdata, uint32_t num)
-    {
-        /*Set an over time*/
-        volatile uint32_t wait_cnt = 0;
-        uint32_t tx_ref_num = num;
-
-        /*Check error*/
-        if ((pdata == nullptr) || (num == 0U))
-        {
-            return 0x01;
-        }
-        /*Enable SPI and start transform*/
-        SPIEnable(num);
-
-#ifdef SPI_CR1_CSTART
-        while (tx_ref_num > 0U)
-        {
-            /* Wait until TXE flag is set to send data */
-            if(SPICheckTXE()==1){
-                if((tx_ref_num>3U)&&(LL_SPI_GetFIFOThreshold(_pspi)>LL_SPI_FIFO_TH_03DATA)){
-                    LL_SPI_TransmitData32(_pspi,*((const uint32_t*)pdata));
-                    pdata += sizeof(uint32_t);
-                    tx_ref_num -= 4U;
-                }
-                else if((tx_ref_num>1U)&&(LL_SPI_GetFIFOThreshold(_pspi)>LL_SPI_FIFO_TH_01DATA)){
-                    LL_SPI_TransmitData16(_pspi,*((const uint16_t*)pdata));
-                    pdata += sizeof(uint16_t);
-                    tx_ref_num -= 2U;
-                }
-                else{
-                    LL_SPI_TransmitData8(_pspi,*pdata);
-                    pdata += sizeof(uint8_t);
-                    tx_ref_num--;
-                }
-                wait_cnt = 0;
-            }
-            else if(++wait_cnt>_maxwaitcnt)
-            {
-                SPIDisable();
-                return 0x01;
-            }
-        }
-
-        /*Wait for the last transmission*/
-        while(LL_SPI_IsActiveFlag_EOT(_pspi)==0){
-            if(++wait_cnt>_maxwaitcnt)
-            {
-                SPIDisable();
-                return 0x01;
-            }
-        }
-#else
-        while (tx_ref_num > 0U)
-        {
-          /* Wait until TXE flag is set to send data */
-          if(SPICheckTXE()==1){
-            LL_SPI_TransmitData8(_pspi,*pdata);
-            pdata += sizeof(uint8_t);
-            tx_ref_num--;
-            wait_cnt = 0;
-          }
-          else if(++wait_cnt>_maxwaitcnt)
-          {
-                SPIDisable();
-                return 0x01;
-          }
-        }
-#endif
-
-        SPIDisable();
-        return 0;
-    }
-
-    uint8_t cSPIBasic::ReadByte(uint8_t *pdata, uint32_t num)
-    {
-        return ExchangeByte(pdata,pdata,num);
-
-//        /*Set an over time*/
-//        volatile uint32_t wait_cnt = 0;
-//        uint32_t rx_ref_num = num;
-//
-//        /*Check error*/
-//        if ((pdata == nullptr) || (num == 0U))
-//        {
-//            return 0x01;
-//        }
-//
-//        while(rx_ref_num>0U){
-//            /* Wait until RXNE flag is set to send data */
-//            if(SPICheckRXNE()==1){
-//                *pdata = LL_SPI_ReceiveData8(_pspi);
-//                pdata += sizeof(uint8_t);
-//                rx_ref_num--;
-//                wait_cnt = 0;
-//            }
-//            else if(++wait_cnt>_maxwaitcnt)
-//            {
-//                return 0x01;
-//            }
-//        }
-//
-//        return 0;
-    }
-
 }
 #endif
