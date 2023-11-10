@@ -2,9 +2,23 @@
  * @Description: Abstract layer of SPI driver
  * @Author: qianwan
  * @Date: 2023-10-30 18:51:08
- * @LastEditTime: 2023-10-31 17:16:05
+ * @LastEditTime: 2023-11-10 10:59:43
  * @LastEditors: qianwan
  */
+ /******************************************************************************
+  * @attention
+  * BSD 3-Clause License
+  * Copyright (c) 2023, Qianwan.Jin
+  * All rights reserved.
+  *
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
+  *
+  ******************************************************************************/
+/*Version 1.0*/
+/*Stepper 0.2*/
+
 #pragma once
 #ifndef LIB_SPI_A_
 #define LIB_SPI_A_

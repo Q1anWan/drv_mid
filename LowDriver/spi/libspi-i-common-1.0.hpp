@@ -2,12 +2,23 @@
  * @Description: An instance of SPIA
  * @Author: qianwan
  * @Date: 2023-10-30 18:42:55
- * @LastEditTime: 2023-11-08 20:04:24
+ * @LastEditTime: 2023-11-10 10:57:12
  * @LastEditors: qianwan
  */
- 
+ /******************************************************************************
+  * @attention
+  * BSD 3-Clause License
+  * Copyright (c) 2023, Qianwan.Jin
+  * Copyright (c) 2023 STMicroelectronics.
+  * All rights reserved.
+  *
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
+  *
+  ******************************************************************************/
  /*Version 1.0*/
- /*Stepper 0.2*/
+ /*Stepper 0.3*/
 
 #pragma once
 #ifndef LIB_SPI_I_
@@ -23,17 +34,17 @@
 // #include "stm32f1xx_ll_dma.h"
 // #endif
 
-// #include "stm32f4xx_ll_spi.h"
-// #include "stm32f4xx_ll_gpio.h"
-// #if defined (DMA1)
-// #include "stm32f4xx_ll_dma.h"
-// #endif
+#include "stm32f4xx_ll_spi.h"
+#include "stm32f4xx_ll_gpio.h"
+#if defined (DMA1)
+#include "stm32f4xx_ll_dma.h"
+#endif
 
- #include "stm32h7xx_ll_spi.h"
- #include "stm32h7xx_ll_gpio.h"
- #if defined (DMA1)
- #include "stm32h7xx_ll_dma.h"
- #endif
+//  #include "stm32h7xx_ll_spi.h"
+//  #include "stm32h7xx_ll_gpio.h"
+//  #if defined (DMA1)
+//  #include "stm32h7xx_ll_dma.h"
+//  #endif
 
 /***********************************/
 
