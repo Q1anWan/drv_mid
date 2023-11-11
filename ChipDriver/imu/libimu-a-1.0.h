@@ -5,6 +5,19 @@
  * @LastEditTime: 2023-11-09 20:59:23
  * @LastEditors: qianwan
  */
+ /******************************************************************************
+  * @attention
+  * BSD 3-Clause License
+  * Copyright (c) 2023, Qianwan.Jin
+  * All rights reserved.
+  *
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
+  *
+  ******************************************************************************/
+ /*Version 1.0*/
+ /*Stepper 0.1*/
 #pragma once
 #ifndef LIB_IMU_A_
 #define LIB_IMU_A_
