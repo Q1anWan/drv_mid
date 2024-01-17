@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: qianwan
  * @Date: 2023-11-01 14:33:32
- * @LastEditTime: 2023-11-08 17:41:33
+ * @LastEditTime: 2024-01-18 02:40:44
  * @LastEditors: qianwan
 -->
 # Manual of libspi
@@ -58,6 +58,10 @@ document version: 1.0
 #### libspi-i-common
 &emsp;The libspi-i-common-*version*.hpp implements a layer based on the STM32 Low Layer(LL) API and accomodates differences between the STM32 SPI controllers. DMA features can be cropped by config definations in libspi-i-common.
 &emsp;To straighten differences between LL APIs and maximize optimization, function templates are used in libspi-i-common. Users need to instantiate these templates first. Below is a list of these templates and a comparison list.
+
+#### libspi-i-hal
+&emsp;The libspi-i-spi-*version*.hpp implements a layer based on the STM32 HAL API and accomodates differences between the STM32 SPI controllers.
+&emsp;It may be slower than common instance that based on LL API, but it would be much convient to adopt differnt mcu thanks to ST.
 
 
 ###### Additional use DMA transmit and recieve
