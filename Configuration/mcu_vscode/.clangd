@@ -1,0 +1,2 @@
+CompileFlags:
+  Remove: [-mthumb*,-mlongcalls,-fno-*,-fstrict-*]

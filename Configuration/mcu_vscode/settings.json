@@ -1,0 +1,20 @@
+{
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "clangd.arguments": [
+        "--pch-storage=memory",
+        "-j=16",
+        "--clang-tidy",
+        "--all-scopes-completion",
+        "--background-index",
+        "--completion-style=bundled",
+        "--fallback-style=Microsoft",
+        "--header-insertion=never",
+        "--header-insertion-decorators",
+        "--enable-config",
+        "--query-driver=D:\\Software\\GNU\\ARM\\12.3 rel1\\bin\\arm-none-eabi*",
+        "--log=error"
+    ],
+    "clangd.fallbackFlags": [
+        "-ID:\\Software\\GNU\\ARM\\12.3 rel1\\arm-none-eabi\\include\\**"
+    ]
+}
