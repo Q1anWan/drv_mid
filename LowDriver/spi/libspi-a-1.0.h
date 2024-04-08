@@ -2,7 +2,7 @@
  * @Description: Abstract layer of SPI driver
  * @Author: qianwan
  * @Date: 2023-10-30 18:51:08
- * @LastEditTime: 2023-11-10 10:59:43
+ * @LastEditTime: 2024-04-07 23:53:43
  * @LastEditors: qianwan
  */
  /******************************************************************************
@@ -17,7 +17,7 @@
   *
   ******************************************************************************/
 /*Version 1.0*/
-/*Stepper 0.2*/
+/*Stepper 0.3*/
 
 #pragma once
 #ifndef LIB_SPI_A_
@@ -106,7 +106,7 @@ namespace SPIA
 
         /**
          * @brief  Receive multi bytes from slaver through DMA
-         * @note   These function will not start SPI transmission. Another SPI send function should be used to start transmission. When transmission finished, DMA-RX-CHN IRQ will be called.
+         * @note   These function should request os to start a dma transmission. BLock or not depends on instance level. Using IRQ function or not depends on os behaviors.
          * @param  pdata Pointer of buffer that used to received data
          * @param  num Number of bytes
          * @retval Function execution status(Successful:0 Failed:1)
@@ -115,7 +115,7 @@ namespace SPIA
 
         /**
          * @brief  Exchange multi bytes with slaver through DMA
-         * @note   Send earlier than receive, pdatatx and pdatarx can be same. When transmission finished, SPI IRQ will be called.
+         * @note   These function should request os to start a dma transmission. BLock or not depends on instance level. Using IRQ function or not depends on os behaviors.
          * @param  pdatatx Pointer of data buffer that want to be sent
          * @param  pdatarx Pointer of buffer that used to receive data
          * @param  num Number of bytes
@@ -124,7 +124,7 @@ namespace SPIA
         virtual uint8_t TransmitReceiveDMA(uint8_t *pdatatx, uint8_t *pdatarx, uint32_t num){return 0x01;}
 
         /**
-         * @brief  DMA-RX-CHN IRQ function that need to be set in interrupt call back function
+         * @brief  These function should request os to start a dma transmission. BLock or not depends on instance level. Using IRQ function or not depends on os behaviors.
          * @note   Put this function in DMA RX Channel irq function
          * @param  None
          * @retval Function execution status(Successful:0 Failed:1)
